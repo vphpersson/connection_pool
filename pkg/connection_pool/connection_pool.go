@@ -3,14 +3,12 @@ package connection_pool
 import (
 	"container/list"
 	"context"
-	"errors"
 	"fmt"
 	motmedelContext "github.com/Motmedel/utils_go/pkg/context"
 	motmedelErrors "github.com/Motmedel/utils_go/pkg/errors"
 	connectionPoolErrors "github.com/vphpersson/connection_pool/pkg/errors"
 	"log/slog"
 	"net"
-	"strings"
 	"sync"
 )
 
@@ -85,7 +83,7 @@ func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error)
 	defer pool.mutex.Unlock()
 
 	if err != nil {
-		if err := connection.Close(); err != nil && !strings.HasSuffix(err.Error(), "use of closed network connection") && !errors.Is(err, net.ErrClosed) {
+		if err := connection.Close(); err != nil && !motmedelErrors.IsClosedError(err) {
 			slog.WarnContext(
 				motmedelContext.WithErrorContextValue(
 					ctx,
