@@ -74,7 +74,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 }
 
 func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error) {
-	if connection == nil {
+	if net.Conn(connection) == nil {
 		return
 	}
 
