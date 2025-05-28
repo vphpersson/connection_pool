@@ -99,25 +99,31 @@ func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error)
 	pool.condition.Signal()
 }
 
-func (pool *ConnectionPool[T]) Close(ctx context.Context) {
+func (pool *ConnectionPool[T]) Close() error {
 	connections := pool.connections
 	if connections == nil || connections.Len() == 0 {
-		return
+		return nil
 	}
 
 	for element := connections.Front(); element != nil; element = element.Next() {
-		if connection, ok := element.Value.(net.Conn); ok {
-			if err := connection.Close(); err != nil {
-				slog.WarnContext(
-					motmedelContext.WithErrorContextValue(
-						ctx,
-						motmedelErrors.New(fmt.Errorf("connection close: %w", err), connection),
-					),
-					"An error occurred when closing a connection.",
-				)
-			}
+		elementValue := element.Value
+		connection, ok := elementValue.(net.Conn)
+		if !ok {
+			return motmedelErrors.NewWithTrace(
+				fmt.Errorf("%w (net.Conn)", motmedelErrors.ErrConversionNotOk),
+				elementValue,
+			)
+		}
+		if connection == nil {
+			return motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
+		}
+
+		if err := connection.Close(); err != nil {
+			return motmedelErrors.New(fmt.Errorf("connection close: %w", err), connection)
 		}
 	}
+
+	return nil
 }
 
 func (pool *ConnectionPool[T]) Len() int {
