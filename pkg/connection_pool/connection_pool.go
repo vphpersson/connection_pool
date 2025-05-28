@@ -25,9 +25,9 @@ type ConnectionPool[T net.Conn] struct {
 func New[T net.Conn](fn func() (*T, error)) *ConnectionPool[T] {
 	mutex := new(sync.Mutex)
 	return &ConnectionPool[T]{
+		MaxNumConnections:    5,
 		MakeConnection:       fn,
 		mutex:                mutex,
-		numActiveConnections: 0,
 		connections:          list.New(),
 		cond:                 sync.NewCond(mutex),
 	}
