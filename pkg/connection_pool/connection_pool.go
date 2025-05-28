@@ -3,6 +3,7 @@ package connection_pool
 import (
 	"container/list"
 	"context"
+	"errors"
 	"fmt"
 	motmedelContext "github.com/Motmedel/utils_go/pkg/context"
 	motmedelErrors "github.com/Motmedel/utils_go/pkg/errors"
@@ -83,11 +84,11 @@ func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error)
 	defer pool.mutex.Unlock()
 
 	if err != nil {
-		if err := connection.Close(); err != nil {
+		if err := connection.Close(); err != nil && err.Error() != "use of closed network connection" && !errors.Is(err, net.ErrClosed) {
 			slog.WarnContext(
 				motmedelContext.WithErrorContextValue(
 					ctx,
-					motmedelErrors.New(fmt.Errorf("connection close: %w", err), connection),
+					motmedelErrors.NewWithTrace(fmt.Errorf("connection close: %w", err), connection),
 				),
 				"An error occurred when closing a connection.",
 			)
