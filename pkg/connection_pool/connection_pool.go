@@ -68,7 +68,6 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 		return zero, motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
 	}
 
-	pool.connections.PushBack(connection)
 	pool.numActiveConnections++
 
 	return connection, nil
