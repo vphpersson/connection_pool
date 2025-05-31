@@ -54,7 +54,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 				element,
 			)
 		}
-		if connection == nil {
+		if io.Closer(connection) == nil {
 			return zero, motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
 		}
 
@@ -65,7 +65,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 	if err != nil {
 		return zero, fmt.Errorf("make connection: %w", err)
 	}
-	if connection == nil {
+	if io.Closer(connection) == nil {
 		return zero, motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
 	}
 
@@ -75,7 +75,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 }
 
 func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error) {
-	if connection == nil {
+	if io.Closer(connection) == nil {
 		return
 	}
 
@@ -115,7 +115,7 @@ func (pool *ConnectionPool[T]) Close() error {
 				elementValue,
 			)
 		}
-		if connection == nil {
+		if io.Closer(connection) == nil {
 			return motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
 		}
 
