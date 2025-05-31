@@ -7,12 +7,13 @@ import (
 	motmedelContext "github.com/Motmedel/utils_go/pkg/context"
 	motmedelErrors "github.com/Motmedel/utils_go/pkg/errors"
 	connectionPoolErrors "github.com/vphpersson/connection_pool/pkg/errors"
+	"io"
 	"log/slog"
 	"net"
 	"sync"
 )
 
-type ConnectionPool[T net.Conn] struct {
+type ConnectionPool[T io.Closer] struct {
 	MaxNumConnections int
 	MinNumConnections int
 	MakeConnection    func() (T, error)
@@ -53,7 +54,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 				element,
 			)
 		}
-		if net.Conn(connection) == nil {
+		if connection == nil {
 			return zero, motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
 		}
 
@@ -64,7 +65,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 	if err != nil {
 		return zero, fmt.Errorf("make connection: %w", err)
 	}
-	if net.Conn(connection) == nil {
+	if connection == nil {
 		return zero, motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
 	}
 
@@ -74,7 +75,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 }
 
 func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error) {
-	if net.Conn(connection) == nil {
+	if connection == nil {
 		return
 	}
 
