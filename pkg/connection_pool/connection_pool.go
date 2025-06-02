@@ -94,7 +94,7 @@ func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error)
 		}
 		pool.numActiveConnections--
 	} else {
-		pool.connections.PushBack(connection)
+		pool.connections.PushFront(connection)
 	}
 
 	pool.condition.Signal()
