@@ -14,7 +14,7 @@ type mockConnection struct {
 	mu       sync.Mutex
 }
 
-func (mc *mockConnection) Read(_ []byte) (int, error) { return 0, nil }
+func (mc *mockConnection) Read(_ []byte) (int, error)  { return 0, nil }
 func (mc *mockConnection) Write(_ []byte) (int, error) { return 0, nil }
 func (mc *mockConnection) Close() error {
 	mc.mu.Lock()
@@ -163,5 +163,35 @@ func TestConnectionPool_ErrorOnPut(t *testing.T) {
 	// Verify the connection is not added back to the pool
 	if pool.Len() != 0 {
 		t.Fatalf("expected pool length to be 0 after error, but got %d", pool.Len())
+	}
+}
+
+func TestConnectionPool_Get_MakeConnectionFails(t *testing.T) {
+	t.Parallel()
+
+	pool := connection_pool.New(func() (*mockConnection, error) {
+		return nil, errors.New("connection creation failed")
+	})
+
+	conn, err := pool.Get()
+	if err == nil {
+		t.Fatal("expected error when MakeConnection fails, got nil")
+	}
+	if conn != nil {
+		t.Fatal("expected nil connection when MakeConnection fails")
+	}
+}
+
+func TestConnectionPool_CloseEmptyPool(t *testing.T) {
+	t.Parallel()
+
+	pool := connection_pool.New(func() (*mockConnection, error) {
+		return newMockConnection()
+	})
+
+	// Close without any connections should not return an error
+	err := pool.Close()
+	if err != nil {
+		t.Fatalf("expected no error closing empty pool, got %v", err)
 	}
 }

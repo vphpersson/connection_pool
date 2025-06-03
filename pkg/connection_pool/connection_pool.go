@@ -15,7 +15,6 @@ import (
 
 type ConnectionPool[T io.Closer] struct {
 	MaxNumConnections int
-	MinNumConnections int
 	MakeConnection    func() (T, error)
 
 	numActiveConnections int
