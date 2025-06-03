@@ -50,7 +50,7 @@ func (pool *ConnectionPool[T]) Get() (T, error) {
 		connection, ok := element.(T)
 		if !ok {
 			return zero, motmedelErrors.NewWithTrace(
-				fmt.Errorf("%w (generic net.Conn)", motmedelErrors.ErrConversionNotOk),
+				fmt.Errorf("%w (generic io.Closer)", motmedelErrors.ErrConversionNotOk),
 				element,
 			)
 		}
@@ -101,28 +101,30 @@ func (pool *ConnectionPool[T]) Put(ctx context.Context, connection T, err error)
 }
 
 func (pool *ConnectionPool[T]) Close() error {
-	connections := pool.connections
-	if connections == nil || connections.Len() == 0 {
+	pool.mutex.Lock()
+	defer pool.mutex.Unlock()
+
+	if pool.connections == nil || pool.connections.Len() == 0 {
 		return nil
 	}
+	for element := pool.connections.Front(); element != nil; {
+		connection, _ := element.Value.(io.Closer)
 
-	for element := connections.Front(); element != nil; element = element.Next() {
-		elementValue := element.Value
-		connection, ok := elementValue.(net.Conn)
-		if !ok {
-			return motmedelErrors.NewWithTrace(
-				fmt.Errorf("%w (net.Conn)", motmedelErrors.ErrConversionNotOk),
-				elementValue,
-			)
-		}
-		if io.Closer(connection) == nil {
-			return motmedelErrors.NewWithTrace(connectionPoolErrors.ErrNilConnection)
+		next := element.Next()
+		pool.connections.Remove(element)
+
+		if connection != nil {
+			if err := connection.Close(); err != nil {
+				return motmedelErrors.NewWithTrace(fmt.Errorf("connection close: %w", err), connection)
+			}
 		}
 
-		if err := connection.Close(); err != nil {
-			return motmedelErrors.New(fmt.Errorf("connection close: %w", err), connection)
-		}
+		element = next
 	}
+
+	pool.connections = list.New()
+
+	pool.numActiveConnections = 0
 
 	return nil
 }
